@@ -11,6 +11,8 @@ const defaultCorsOrigins = [
   "https://web-genie-ai.vercel.app",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
+  "https://web-genie-6ufr70cyw-hemant-sharmas-projects.vercel.app",
+  "https://itshemant.me",
 ];
 
 async function main() {
