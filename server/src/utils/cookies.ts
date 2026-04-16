@@ -4,6 +4,7 @@ import type { CookieOptions } from "express";
 export const cookiesConfig: CookieOptions = {
     httpOnly: true,
     secure: env.IN_PROD,
-    sameSite: env.IN_PROD ? "none" : "lax",
+    sameSite: env.IN_PROD ? "lax" : "lax",
+    domain: env.IN_PROD ? ".itshemant.me" : undefined,
     maxAge: 2 * 60 * 60 * 1000,
 }
