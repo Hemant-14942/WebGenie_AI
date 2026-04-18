@@ -12,6 +12,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { StartCheckoutButton } from "@/components/payments/StartCheckoutButton";
 import { serverUrl } from "@/helpers/constants";
 import { useAppSelector } from "@/store/hooks";
 
@@ -140,6 +141,27 @@ export default function ProfilePage() {
               <p className="text-lg font-semibold">{websites.length}</p>
             </div>
           </article>
+        </section>
+
+        <section className="mt-6 rounded-2xl border border-green/25 bg-green/5 p-5">
+          <h2 className="text-lg font-semibold text-white">Buy credits</h2>
+          <p className="mt-1 text-sm text-white/55">
+            One-time Stripe checkout. Credits apply after payment completes.
+          </p>
+          <div className="mt-4 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
+            <StartCheckoutButton
+              plan="pro"
+              className="bg-green text-black hover:brightness-95"
+            >
+              Pro — ₹499 (500 credits)
+            </StartCheckoutButton>
+            <StartCheckoutButton
+              plan="enterprise"
+              className="border border-white/20 bg-white/10 text-white hover:bg-white/15"
+            >
+              Enterprise — ₹1499 (3000 credits)
+            </StartCheckoutButton>
+          </div>
         </section>
 
         <section className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5">

@@ -135,12 +135,18 @@ export default function GeneratePage() {
         <div className="mx-auto max-w-lg text-center">
           <h1 className="text-2xl font-semibold tracking-tight">No credits left</h1>
           <p className="mt-3 text-sm text-white/60">
-            Add credits or upgrade your plan to keep building.
+            Buy credits on your profile (Stripe checkout), then come back here.
           </p>
           <Button
             asChild
+            className="mt-8 rounded-full bg-green px-8 font-semibold text-black hover:brightness-95"
+          >
+            <Link href="/profile">Buy credits</Link>
+          </Button>
+          <Button
+            asChild
             variant="outline"
-            className="mt-8 rounded-full border-white/20 text-white hover:bg-white/10"
+            className="mt-4 rounded-full border-white/20 text-white hover:bg-white/10"
           >
             <Link href="/">Back to home</Link>
           </Button>

@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Reveal from "@/components/ui/Reveal";
+import { StartCheckoutButton } from "@/components/payments/StartCheckoutButton";
 
 const pricingPlans = [
   {
@@ -43,7 +46,7 @@ const pricingPlans = [
       "Team collaboration",
       "Dedicated support",
     ],
-    cta: "Contact Sales",
+    cta: "Buy Enterprise",
     highlighted: false,
   },
 ];
@@ -102,18 +105,32 @@ export default function PricingSection() {
                   ))}
                 </ul>
 
-                <Button
-                  className={`mt-8 h-10 w-full rounded-xl font-semibold ${
-                    plan.highlighted
-                      ? "bg-green text-black hover:bg-[#c8ef2a]"
-                      : "bg-white/10 text-white hover:bg-white/20"
-                  }`}
-                  asChild
-                >
-                  <Link href={plan.highlighted ? "/generate" : "/login"}>
-                    {plan.cta}
-                  </Link>
-                </Button>
+                {plan.name === "Free" ? (
+                  <Button
+                    className="mt-8 h-10 w-full rounded-xl bg-white/10 font-semibold text-white hover:bg-white/20"
+                    asChild
+                  >
+                    <Link href="/login">{plan.cta}</Link>
+                  </Button>
+                ) : plan.name === "Pro" ? (
+                  <div className="mt-8">
+                    <StartCheckoutButton
+                      plan="pro"
+                      className="bg-green text-black hover:bg-[#c8ef2a]"
+                    >
+                      {plan.cta}
+                    </StartCheckoutButton>
+                  </div>
+                ) : (
+                  <div className="mt-8">
+                    <StartCheckoutButton
+                      plan="enterprise"
+                      className="bg-white/10 text-white hover:bg-white/20"
+                    >
+                      {plan.cta}
+                    </StartCheckoutButton>
+                  </div>
+                )}
               </article>
             </Reveal>
           ))}

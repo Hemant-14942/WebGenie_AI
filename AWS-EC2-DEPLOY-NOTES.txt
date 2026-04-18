@@ -1,0 +1,216 @@
+================================================================================
+  AI Website Builder — AWS EC2 + Docker reference (copy/paste cheat sheet)
+  Repo root: ai-website-builder/   |   API Docker stack lives in: server/
+
+  Detailed “why + problems we hit + fixes” + EC2 path ~/app/webgenai:
+    → EC2-WEBGENAI-FULL-LEARNING-GUIDE.md (same repo root)
+================================================================================
+
+--------------------------------------------------------------------------------
+1) PROJECT LAYOUT (what matters for deploy)
+--------------------------------------------------------------------------------
+
+  ai-website-builder/                 ← run `git pull` HERE (Git repo root)
+  ├── client/                         ← Next.js frontend (often Vercel, not EC2)
+  ├── server/                         ← Node API + Docker Compose + nginx
+  │   ├── Dockerfile
+  │   ├── docker-compose.yml          ← defines `server` + `nginx` services
+  │   ├── nginx/default.conf          ← proxies /api → Node on port 5000
+  │   ├── .env                        ← CREATE ON SERVER (never commit secrets)
+  │   └── .env.example                ← template / reminder of keys
+  └── AWS-EC2-DEPLOY-NOTES.txt        ← this file
+
+
+--------------------------------------------------------------------------------
+2) GIT: WHERE TO RUN COMMANDS
+--------------------------------------------------------------------------------
+
+  On EC2 (or any machine with the clone):
+
+    cd /path/to/ai-website-builder     # repo ROOT (where .git lives)
+    git status
+    git pull origin main               # or `master` / your default branch
+
+  Docker commands run from SERVER folder:
+
+    cd /path/to/ai-website-builder/server
+    docker compose build
+    docker compose up -d               # or: docker compose up -d --build
+
+
+--------------------------------------------------------------------------------
+3) EC2 — FIRST-TIME HOST SETUP (Ubuntu-style; adjust for Amazon Linux)
+--------------------------------------------------------------------------------
+
+  Update packages:
+
+    sudo apt update && sudo apt upgrade -y
+
+  Install Git (if missing):
+
+    sudo apt install -y git
+
+  Install Docker Engine + Compose plugin (official docs recommended; sketch):
+
+    sudo apt install -y ca-certificates curl
+    sudo install -m 0755 -d /etc/apt/keyrings
+    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+      https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" \
+      | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt update
+    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+  Add your user to `docker` group (logout/login after):
+
+    sudo usermod -aG docker $USER
+
+  Verify:
+
+    docker --version
+    docker compose version
+
+
+--------------------------------------------------------------------------------
+4) CLONE REPO ON EC2 (first deploy)
+--------------------------------------------------------------------------------
+
+    cd ~
+    git clone <YOUR_GITHUB_SSH_OR_HTTPS_URL> ai-website-builder
+    cd ai-website-builder/server
+
+  Create `.env` from example and edit secrets:
+
+    cp .env.example .env
+    nano .env    # or vim
+
+
+--------------------------------------------------------------------------------
+5) ENV VARS (server/.env) — Zod-validated + extras used in code
+--------------------------------------------------------------------------------
+
+  Required by server/src/config/env.ts (app will exit if missing):
+
+    PORT=5000
+    MONGO_URI=<mongodb connection string WITHOUT trailing slash>
+    DB_NAME=ai-website-builder
+    JWT_SECRET=<long random string>
+    IN_PROD=true
+    OPENAI_API_KEY=<key>
+    OPENAI_MODEL=deepseek/deepseek-chat
+
+  Optional (comma-separated):
+
+    CORS_ORIGINS=https://your-frontend.vercel.app,https://app.example.com
+
+  Also set in .env (used via process.env; keep even if not in Zod schema):
+
+    DEPLOYMENT_URL=https://your-frontend-domain/sites
+    STRIPE_SECRET_KEY=...
+    STRIPE_WEBHOOK_SECRET=...
+    STRIPE_SUCCESS_URL=https://your-frontend/payment/success
+    STRIPE_CANCEL_URL=https://your-frontend/payment/cancel
+
+  Note: IN_PROD with z.coerce.boolean — verify behaviour if you use IN_PROD=false
+  as a string in .env (prefer true/false without quotes issues).
+
+
+--------------------------------------------------------------------------------
+6) DOCKER COMPOSE — BUILD, RUN, LOGS, RESTART
+--------------------------------------------------------------------------------
+
+  Always from:  ai-website-builder/server
+
+    docker compose build
+    docker compose up -d
+    docker compose ps
+    docker compose logs -f server
+    docker compose logs -f nginx
+    docker compose restart server
+
+  Rebuild after code pull:
+
+    git pull          # from repo ROOT
+    cd server
+    docker compose up -d --build
+
+  Clean rebuild (slower):
+
+    docker compose build --no-cache
+    docker compose up -d
+
+  Stop:
+
+    docker compose down
+
+
+--------------------------------------------------------------------------------
+7) NETWORKING — AWS SECURITY GROUP + OS FIREWALL
+--------------------------------------------------------------------------------
+
+  EC2 Security Group inbound (typical):
+
+    TCP 22   — SSH (your IP only, if possible)
+    TCP 80   — HTTP (nginx in docker-compose maps host 80 → nginx)
+    TCP 443  — HTTPS (after you add TLS in front; optional at first)
+
+  If `ufw` is enabled on Ubuntu:
+
+    sudo ufw allow OpenSSH
+    sudo ufw allow 80/tcp
+    sudo ufw allow 443/tcp
+    sudo ufw enable
+    sudo ufw status
+
+
+--------------------------------------------------------------------------------
+8) QUICK HEALTH CHECKS
+--------------------------------------------------------------------------------
+
+  From the EC2 instance (nginx listens on port 80):
+
+    curl -s http://127.0.0.1/health
+    curl -s http://127.0.0.1/api/health
+
+  From your laptop (replace with public IP or domain):
+
+    curl -s http://<EC2_PUBLIC_IP>/health
+
+
+--------------------------------------------------------------------------------
+9) STRIPE WEBHOOK (production)
+--------------------------------------------------------------------------------
+
+  Endpoint URL (HTTPS once you terminate TLS on 443):
+
+    https://<YOUR_DOMAIN_OR_IP>/api/stripe/webhook
+
+  Local testing (laptop):
+
+    stripe listen --forward-to localhost:5000/api/stripe/webhook
+
+
+--------------------------------------------------------------------------------
+10) OPTIONAL — HTTPS (Let’s Encrypt + nginx on host)
+--------------------------------------------------------------------------------
+
+  Common pattern: install certbot on the host, obtain certs, mount them into
+  nginx or use a separate reverse proxy. Exact steps depend on your domain DNS
+  pointing to EC2; follow Certbot + nginx guides for your OS.
+
+  Stripe live webhooks require a public HTTPS URL.
+
+
+--------------------------------------------------------------------------------
+11) TYPICAL “UPDATE AND REDEPLOY” LOOP
+--------------------------------------------------------------------------------
+
+    cd ~/ai-website-builder
+    git pull
+    cd server
+    docker compose up -d --build
+
+================================================================================
+  End of reference — edit this file anytime for your own infra details.
+================================================================================
