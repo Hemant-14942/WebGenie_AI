@@ -2,6 +2,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import { connectDB, env } from "./config/index.js";
 import router from "./routes/index.js";
+import { handleStripeWebhook } from "./controllers/payments.controller.js";
 import cors from "cors";
 import helmet from "helmet";
 
@@ -13,6 +14,8 @@ const defaultCorsOrigins = [
   "http://127.0.0.1:3000",
   "https://web-genie-6ufr70cyw-hemant-sharmas-projects.vercel.app",
   "https://itshemant.me",
+  "https://www.itshemant.me",
+  "https://app.itshemant.me",
 ];
 
 async function main() {
@@ -47,6 +50,15 @@ async function main() {
       crossOriginResourcePolicy: { policy: "cross-origin" },
     }),
   );
+
+  // Stripe webhooks require the raw request body for signature verification.
+  // Must be registered BEFORE express.json() so req.body stays a Buffer.
+  app.post(
+    "/api/stripe/webhook",
+    express.raw({ type: "application/json" }),
+    handleStripeWebhook,
+  );
+
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   
